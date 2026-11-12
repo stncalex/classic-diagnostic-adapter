@@ -315,6 +315,32 @@ def add_session_type_service(dlr: DiagLayerRaw):
         semantic="IDENTIFICATION",
     )
 
+def add_led_mode_service(dlr: DiagLayerRaw):
+    led_mode_dop = texttable_int_str_dop(
+        dlr,
+        "LEDMode",
+        [
+            (0x00, "White"),
+            (0x01, "Blue"),
+            (0x02, "Green"),
+            (0x03, "Idle"),
+        ],
+    )
+
+    dlr.diag_data_dictionary_spec.data_object_props.append(led_mode_dop)
+
+    add_service_did(
+        dlr=dlr,
+        service_name="LEDMode",
+        property_name="LEDMode",
+        did=0xF201,
+        dop=led_mode_dop,
+        add_write=True,
+        funct_class="Varcoding",
+        long_name="Flux Capacitor LED Mode",
+        semantic="STOREDDATA",
+    )
+
 
 def add_power_consumption_service(dlr: DiagLayerRaw, sdgs: list | None = None):
     add_service_did(

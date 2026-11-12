@@ -51,6 +51,7 @@ from shared import (
     add_common_diag_comms,
     add_power_consumption_service,
     add_state_charts,
+    add_led_mode_service,
 )
 from shared_units import add_common_units
 from transferdata import add_transfer_services
@@ -256,6 +257,7 @@ def add_base_variant(
     # FLXC1000-specific services
     if ecu_name == "FLXC1000":
         add_power_consumption_service(base_variant, sdgs=data_sdgs)
+        add_led_mode_service(base_variant)
 
     dlc.base_variants.append(BaseVariant(diag_layer_raw=base_variant))
 

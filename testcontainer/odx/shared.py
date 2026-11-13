@@ -336,7 +336,7 @@ def add_led_mode_service(dlr: DiagLayerRaw):
         did=0xF201,
         dop=led_mode_dop,
         add_write=True,
-        funct_class="Varcoding",
+        funct_class="Routines",
         long_name="Flux Capacitor LED Mode",
         semantic="STOREDDATA",
     )

@@ -93,6 +93,12 @@ where
                     tracing::info!("Waiting for VIRs...");
                     match socket.recv().await {
                         Some(Ok((doip_msg, source_addr))) => {
+                            tracing::info!(
+                                source = %source_addr,
+                                payload_type = ?doip_msg.header.payload_type,
+                                "DoIP UDP packet received during discovery"
+                            );
+
                             if let PayloadType::VehicleIdentificationRequest =
                                 doip_msg.header.payload_type {
                                 // skip our own VIR

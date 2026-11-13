@@ -42,6 +42,7 @@ from odxtools.structure import Structure
 from odxtools.table import Table
 from odxtools.tablerow import TableRow
 from odxtools.termination import Termination
+from odxtools.preconditionstateref import PreConditionStateRef
 
 _ROUTINE_TYPE_TO_SUBFUNCTION = {
     "Start": 0x01,
@@ -61,6 +62,7 @@ def add_routine(
     description: str | None = None,
     is_functional: bool = False,
     sdgs: list | None = None,
+    pre_condition_state_refs: list[PreConditionStateRef] | None = None,
 ) -> None:
     """Add a RoutineControl (0x31) operation service to the diagnostic layer.
 
@@ -159,6 +161,7 @@ def add_routine(
             request_ref=ref(request),
             pos_response_refs=[ref(response)],
             sdgs=sdgs or [],
+            pre_condition_state_refs=pre_condition_state_refs or [],
         )
     )
 

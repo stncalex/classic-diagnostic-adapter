@@ -1071,3 +1071,80 @@ async fn test_get_operation_info_before_variant_detection() {
         "selftest should not require proximity proof"
     );
 }
+
+#[tokio::test]
+async fn test_selftest_requires_extended_session() {
+    let test_env = TestEnv::builder().await.unwrap();
+
+    let _lock = Lock::acquire(&test_env, locks::COMPONENTS_FLXC1000_LOCKS, LOCK_EXPIRATION).await;
+
+    // Explicitly enter Default so the initial state is deterministic.
+    switch_session(
+        "default",
+        &test_env,
+        COMPONENTS_FLXC1000_BASE,
+        StatusCode::OK,
+    )
+    .await
+    .unwrap()
+    .unwrap();
+
+    // Record what the simulator receives while the request is rejected.
+    let recorder = test_env
+        .record(ECU_FLXC1000)
+        .await
+        .expect("failed to start recording");
+
+    // The SelfTest POST must be rejected in Default.
+    send_authenticated_cda_request(
+        &test_env,
+        COMPONENTS_FLXC1000_OPERATIONS_SELFTEST_EXECUTIONS,
+        StatusCode::PRECONDITION_FAILED,
+        Method::POST,
+        Some("{}"),
+        None,
+    )
+    .await
+    .unwrap();
+
+    let recordings = recorder.stop().await.expect("failed to stop recording");
+
+    assert!(
+        !recordings.contains(&"31011001".to_owned()),
+        "SelfTest must not reach the simulator in Default: {recordings:?}"
+    );
+
+    // Enter Extended and try the same operation again.
+    switch_session(
+        "extended",
+        &test_env,
+        COMPONENTS_FLXC1000_BASE,
+        StatusCode::OK,
+    )
+    .await
+    .unwrap()
+    .unwrap();
+
+    let recorder = test_env
+        .record(ECU_FLXC1000)
+        .await
+        .expect("failed to start recording");
+
+    send_authenticated_cda_request(
+        &test_env,
+        COMPONENTS_FLXC1000_OPERATIONS_SELFTEST_EXECUTIONS,
+        StatusCode::OK,
+        Method::POST,
+        Some("{}"),
+        None,
+    )
+    .await
+    .unwrap();
+
+    let recordings = recorder.stop().await.expect("failed to stop recording");
+
+    assert!(
+        recordings.contains(&"31011001".to_owned()),
+        "SelfTest should reach the simulator in Extended: {recordings:?}"
+    );
+}

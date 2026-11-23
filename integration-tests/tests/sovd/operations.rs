@@ -1099,6 +1099,8 @@ async fn test_get_operation_info_before_variant_detection() {
 
 #[tokio::test]
 async fn test_selftest_requires_extended_session() {
+    const SELFTEST_START_REQUEST: &str = "31011001";
+
     let test_env = TestEnv::builder().await.unwrap();
 
     let _lock = Lock::acquire(&test_env, locks::COMPONENTS_FLXC1000_LOCKS, LOCK_EXPIRATION).await;
@@ -1121,22 +1123,32 @@ async fn test_selftest_requires_extended_session() {
         .expect("failed to start recording");
 
     // The SelfTest POST must be rejected in Default.
-    send_authenticated_cda_request(
+    let default_response = send_authenticated_cda_request(
         &test_env,
         COMPONENTS_FLXC1000_OPERATIONS_SELFTEST_EXECUTIONS,
-        StatusCode::PRECONDITION_FAILED,
+        StatusCode::BAD_REQUEST,
         Method::POST,
         Some("{}"),
         None,
     )
-    .await
-    .unwrap();
+    .await;
 
     let recordings = recorder.stop().await.expect("failed to stop recording");
+    let selftest_forwarded = recordings
+        .iter()
+        .any(|request| request == SELFTEST_START_REQUEST);
+    let default_body = match default_response {
+        Ok(response) => response_to_json(&response).expect("failed to parse rejection body"),
+        Err(error) => panic!(
+            "Default session: expected HTTP 400; {error:?}; \
+             SelfTest forwarded: {selftest_forwarded}; recordings: {recordings:?}"
+        ),
+    };
 
     assert!(
-        !recordings.contains(&"31011001".to_owned()),
-        "SelfTest must not reach the simulator in Default: {recordings:?}"
+        default_body.to_string().contains("Session mismatch") && !selftest_forwarded,
+        "Default session: expected a session mismatch and no SelfTest request at the simulator; \
+         response: {default_body}; SelfTest forwarded: {selftest_forwarded}; recordings: {recordings:?}"
     );
 
     // Enter Extended and try the same operation again.
@@ -1169,7 +1181,9 @@ async fn test_selftest_requires_extended_session() {
     let recordings = recorder.stop().await.expect("failed to stop recording");
 
     assert!(
-        recordings.contains(&"31011001".to_owned()),
+        recordings
+            .iter()
+            .any(|request| request == SELFTEST_START_REQUEST),
         "SelfTest should reach the simulator in Extended: {recordings:?}"
     );
 }
